@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Thresholding</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .v-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1,
+        h2 {
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .image-comparison {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .image-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .canvas-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 2px solid #1976D2;
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .v-btn {
+            margin-top: 20px;
+        }
+
+        .v-file-input,
+        .v-slider {
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .image-comparison {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-container>
+                <h1>Image Thresholding</h1>
+
+                <v-file-input ref="fileInput" label="Select an image" v-model="file" accept="image/*" variant="solo"
+                    @change="onFileChange">
+                </v-file-input>
+
+                <!-- <v-slider v-model="threshold" label="Threshold" min="0" max="255" step="1" thumb-label></v-slider> -->
+
+                <div class="image-comparison">
+                    <div class="image-container">
+                        <h2>Original</h2>
+                        <div class="canvas-container">
+                            <canvas id="canvas" width="500" height="500"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="image-container">
+                        <h2>Thresholded</h2>
+                        <div class="canvas-container">
+                            <canvas id="canvas2" width="500" height="500"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <v-btn @click="updateThreshold" block>Update Thresholding</v-btn>
+                <v-btn @click="downloadImage" color="primary" block>Download Image</v-btn>
+                <v-btn @click="clearImage" block>Clear Image</v-btn>
+            </v-container>
+        </v-app>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.js"></script>
+    <script>
+        const {
+            createApp
+        } = Vue;
+        const {
+            createVuetify
+        } = Vuetify;
+
+        createApp({
+            data() {
+                return {
+                    file: null,
+                    threshold: 128, // Default threshold value
+                    fileName: '',
+                    originalImage: null,
+                    canvas: null,
+                    canvas2: null
+                };
+            },
+            mounted() {
+                this.canvas = new fabric.Canvas('canvas');
+                this.canvas2 = new fabric.Canvas('canvas2');
+            },
+            methods: {
+                onFileChange(e) {
+                    const file = e.target.files[0];
+                    this.fileName = file.name.split('.').slice(0, -1).join('.');
+                    const reader = new FileReader();
+                    reader.onload = (f) => {
+                        fabric.Image.fromURL(f.target.result, (oImg) => {
+                            this.canvas.clear();
+                            this.canvas2.clear();
+
+                            // Tambahkan gambar ke canvas pertama
+                            const img1 = oImg;
+                            img1.scaleToWidth(this.canvas.width);
+                            img1.selectable = false;
+                            img1.evented = false;
+                            this.canvas.add(img1);
+                            this.canvas.centerObject(img1);
+                            this.canvas.renderAll();
+
+                            // Tambahkan gambar kedua ke canvas kedua
+                            const img2 = oImg;
+                            img2.filters.push(new fabric.Image.filters.Grayscale());
+                            img2.applyFilters(); // Terapkan filter yang baru
+                            img2.scaleToWidth(this.canvas2.width);
+                            img2.selectable = false;
+                            img2.evented = false;
+                            this.canvas2.add(img2);
+                            this.canvas2.centerObject(img2);
+                            this.canvas2.renderAll(); // Render ulang canvas
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                },
+                // drawOriginalImage() {
+                //     const canvas = this.$refs.canvas;
+                //     const ctx = canvas.getContext('2d');
+                //     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                //     ctx.drawImage(this.originalImage, 0, 0); // Draw image without resizing
+                // },
+                // applyThreshold() {
+                //     if (this.originalImage) {
+                //         const canvas = this.$refs.canvas2;
+                //         const ctx = canvas.getContext('2d');
+                //         ctx.clearRect(0, 0, canvas.width, canvas.height);
+                //         ctx.drawImage(this.originalImage, 0, 0); // Draw image without resizing
+
+                //         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                //         const data = imageData.data;
+                //         for (let i = 0; i < data.length; i += 4) {
+                //             const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                //             const
+                //                 color = avg > this.threshold ? 255 : 0; // Update based on threshold
+                //             data[i] = data[i + 1] = data[i + 2] = color;
+                //         }
+                //         ctx.putImageData(imageData, 0, 0);
+                //     }
+                // },
+                // updateThreshold() {
+                //     this.applyThreshold(); // Call this function whenever slider is updated
+                // },
+                downloadImage() {
+                    const canvas = this.$refs.canvas2;
+                    const dataURL = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.download = `${this.fileName}-thresholded.png`;
+                    link.href = dataURL;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+                clearImage() {
+                    this.file = null;
+                    this.originalImage = null;
+                    this.$refs.fileInput.value = '';
+                    const canvas1 = this.$refs.canvas;
+                    const ctx1 = canvas1.getContext('2d');
+                    ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+                    const canvas2 = this.$refs.canvas2;
+                    const ctx2 = canvas2.getContext('2d');
+                    ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+                }
+            }
+        }).use(createVuetify()).mount('#app');
+    </script>
+</body>
+
+</html>

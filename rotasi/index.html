@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Rotation App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .v-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1,
+        h2 {
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .image-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .canvas-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 2px solid #1976D2 !important;
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .v-btn {
+            margin-top: 20px;
+        }
+
+        .v-file-input {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-container>
+                <h1>Image Rotation App</h1>
+
+                <v-file-input ref="fileInput" label="Select an image" v-model="file" accept="image/*" variant="solo"
+                    @change="onFileChange">
+                </v-file-input>
+
+                <div class="canvas-container">
+                    <canvas id="canvas" width="500" height="500" style="border: 1px solid #000000;"></canvas>
+                </div>
+
+                <v-row>
+                    <v-col col="6">
+                        <v-btn @click="rotateLeft" block>Putar Kiri</v-btn>
+                    </v-col>
+                    <v-col col="6">
+                        <v-btn @click="rotateRight" block>Putar Kanan</v-btn>
+                    </v-col>
+                </v-row>
+                <v-btn @click="downloadImage" color="primary" block>Download</v-btn>
+                <v-btn @click="clearImage" block>Clear Image</v-btn>
+            </v-container>
+        </v-app>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.js"></script>
+    <script>
+        const {
+            createApp
+        } = Vue;
+        const {
+            createVuetify
+        } = Vuetify;
+
+        createApp({
+            data() {
+                return {
+                    file: null,
+                    canvas: null,
+                    img: null
+                };
+            },
+            mounted() {
+                this.canvas = new fabric.Canvas('canvas');
+            },
+            methods: {
+                onFileChange(e) {
+                    const file = e.target.files[0];
+                    this.fileName = file.name.split('.').slice(0, -1).join('.');
+                    const reader = new FileReader();
+                    reader.onload = (f) => {
+                        fabric.Image.fromURL(f.target.result, (oImg) => {
+                            this.canvas.clear();
+                            this.img = oImg;
+                            this.img.scaleToWidth(this.canvas.width);
+                            this.img.selectable = false;
+                            this.img.evented = false;
+                            this.canvas.add(this.img);
+                            this.canvas.centerObject(this.img);
+                            this.canvas.renderAll();
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                },
+                rotateLeft() {
+                    if (this.img) {
+                        this.img.rotate(this.img.angle - 90);
+                        this.canvas.renderAll();
+                    }
+                },
+                rotateRight() {
+                    if (this.img) {
+                        this.img.rotate(this.img.angle + 90);
+                        this.canvas.renderAll();
+                    }
+                },
+                downloadImage() {
+                    if (this.canvas && this.canvas.getObjects().length > 0) {
+                        const dataURL = this.canvas.toDataURL({
+                            format: 'png',
+                            quality: 1
+                        });
+
+                        const link = document.createElement('a');
+                        link.download = `${this.fileName}-rotasi.png`;
+                        link.href = dataURL;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                },
+                clearImage() {
+                    this.canvas.clear();
+                    this.file = null;
+                    this.$refs.fileInput.value = '';
+                }
+            }
+        }).use(createVuetify()).mount('#app');
+    </script>
+</body>
+
+</html>
